@@ -24,5 +24,18 @@ jobs:
       - name: Build
         run: npm run build --if-present
 
+      - name: Run API smoke test (ci-check)
+        env:
+          TEST_TOKEN: ''
+          API_URL: 'http://localhost:3001/api/chat'
+        run: |
+          # start the server in background and run the smoke test
+          node server.js &
+          SERVER_PID=$!
+          # give server time to start
+          sleep 3
+          npm run ci-check
+          kill $SERVER_PID || true
+
       - name: Show built files
         run: ls -la dist || echo 'no dist'
