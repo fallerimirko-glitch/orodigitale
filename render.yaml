@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: orodigitale-web
+    env: node
+    plan: free
+    region: oregon
+    branch: main
+    buildCommand: npm ci && npm run build
+    startCommand: node server.js
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: TEST_TOKEN
+        sync: false

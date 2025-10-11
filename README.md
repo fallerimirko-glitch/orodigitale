@@ -1,3 +1,6 @@
+<<<<<<< HEAD
+# orodigitale
+=======
 <div align="center">
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
@@ -47,6 +50,19 @@ La app sarà disponibile su `http://localhost:3001`.
 
 Se vuoi, preparo la configurazione per uno di questi provider e la procedura passo-passo.
 
+### Deploy rapido su Render (guida)
+
+1. Vai su https://dashboard.render.com e crea un nuovo Web Service.
+2. Collega il repository GitHub `fallerimirko-glitch/orodigitale`.
+3. Imposta:
+   - Branch: `main`
+   - Build Command: `npm ci && npm run build`
+   - Start Command: `node server.js`
+4. Aggiungi le variabili d'ambiente (Environment) in Render: `GEMINI_API_KEY` e `TEST_TOKEN`.
+5. Avvia il servizio; Render costruirà e pubblicherà l'URL pubblico sicuro (HTTPS).
+
+Nota: mantieni il branch `work/orodigitale-local` per iterazioni e crea PR verso `main` quando sei pronto.
+
 ## Beta testing: protezione e limiti
 
 Per condividere l'endpoint con beta tester in modo sicuro, usa la variabile d'ambiente `TEST_TOKEN` e imposta `GEMINI_API_KEY` sul server di produzione.
@@ -64,3 +80,4 @@ curl -X POST https://your-service.onrender.com/api/chat \
 ```
 
 Se non vuoi usare TEST_TOKEN in sviluppo, non impostarlo: il middleware lo salterà.
+>>>>>>> origin/work/orodigitale-local
