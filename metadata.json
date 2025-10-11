@@ -1,0 +1,5 @@
+{
+  "name": "Digital Force AI Assistant",
+  "description": "An intelligent chat assistant for prospective Digital Force clients. It captures lead information and answers questions about Bitcoin mining services based on official company documents.",
+  "requestFramePermissions": []
+}
