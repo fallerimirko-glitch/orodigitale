@@ -105,12 +105,16 @@ const chatLimiter = rateLimit({
 app.use('/api/chat', chatLimiter);
 
 // Serve static build for preview if available
-// Prefer serving a static landing page if present in /public
-const landingPath = path.join(process.cwd(), 'public', 'landing.html');
+// Prefer serving a static landing page if present in /public or in /dist
+const landingPublicPath = path.join(process.cwd(), 'public', 'landing.html');
+const landingDistPath = path.join(process.cwd(), 'dist', 'landing.html');
 app.get('/', (req, res, next) => {
   try {
-    if (fsExistsSync(landingPath)) {
-      return res.sendFile(landingPath);
+    if (fsExistsSync(landingPublicPath)) {
+      return res.sendFile(landingPublicPath);
+    }
+    if (fsExistsSync(landingDistPath)) {
+      return res.sendFile(landingDistPath);
     }
   } catch (e) {
     // ignore and fall through to static
