@@ -104,6 +104,17 @@ const chatLimiter = rateLimit({
 
 app.use('/api/chat', chatLimiter);
 
+// Debug endpoint: return whether X-TEST-TOKEN header was received (mask actual value)
+app.get('/api/debug', (req, res) => {
+  try {
+    const received = !!(req.headers['x-test-token']);
+    // Return a minimal safe payload for client-side debugging
+    return res.json({ received, origin: req.headers.origin || null, ua: req.headers['user-agent'] || null });
+  } catch (e) {
+    return res.status(500).json({ error: 'debug-failed' });
+  }
+});
+
 // Serve static build for preview if available
 // Prefer serving a static landing page if present in /public or in /dist
 const landingPublicPath = path.join(process.cwd(), 'public', 'landing.html');

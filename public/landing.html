@@ -114,7 +114,8 @@
       <div id="chatMessages" class="chat-messages" aria-live="polite"></div>
       <div class="chat-input">
         <input id="chatInput" placeholder="Scrivi la tua domanda..." aria-label="Messaggio" />
-        <button id="chatSend">Invia</button>
+                <button id="chatSend">Invia</button>
+                <button id="chatDebug" title="Debug headers" style="margin-left:8px;background:#222;color:#fff;border-radius:8px;padding:8px 10px;border:none;cursor:pointer">Dbg</button>
       </div>
     </div>
 
@@ -178,6 +179,19 @@
 
       chatSend.addEventListener('click', sendQuestion);
       chatInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); sendQuestion(); }});
+
+      // Debug: call /api/debug and show result
+      const chatDebug = document.getElementById('chatDebug');
+      chatDebug.addEventListener('click', async ()=>{
+        appendMsg('Eseguo debug...','bot');
+        try{
+          const r = await fetch('/api/debug', { method: 'GET', headers: { 'Content-Type': 'application/json' } });
+          const j = await r.json();
+          appendMsg('Debug result: ' + JSON.stringify(j));
+        }catch(e){
+          appendMsg('Debug failed: ' + (e?.message || e));
+        }
+      });
     </script>
   </body>
 </html>
