@@ -80,22 +80,61 @@ app.post('/api/chat', async (req, res) => {
     const finalPrompt = prompt || `User: ${question}\n`;
 
     // Basic rate-limit not to abuse the API
-    // Initialize genaiClient lazily and robustly (only if API key provided)
-    if (!genaiClient && !USE_FALLBACK) {
+    // We'll attempt the external model proxy first if configured. If that fails, and an API key
+    // is available, we'll fall back to the GenAI client. Finally, if nothing else is available
+    // we'll use the lightweight canned responses.
+    let response;
+
+    // 1) Try external model endpoint if configured (use regardless of GEMINI_API_KEY presence)
+    if (EXTERNAL_MODEL_URL) {
       try {
-        const mod = await import('@google/genai');
-        // prefer named export GoogleGenAI if available, else fallback to default
-        const GoogleGenAI = mod.GoogleGenAI || mod.default || mod;
-        genaiClient = new GoogleGenAI({ apiKey: API_KEY });
+        const payload = {
+          prompt: finalPrompt,
+          history: Array.isArray(sessionHistory) ? sessionHistory.slice(-10) : (clientHistory || []),
+          sessionId,
+        };
+        const headers = { 'Content-Type': 'application/json' };
+        if (EXTERNAL_API_KEY) headers[EXTERNAL_API_HEADER] = EXTERNAL_API_KEY_PREFIX + EXTERNAL_API_KEY;
+
+        const fetchRes = await fetch(EXTERNAL_MODEL_URL, { method: 'POST', headers, body: JSON.stringify(payload), timeout: 15000 });
+        const json = await fetchRes.json();
+        // Try common fields for text
+        response = json?.text ? { text: json.text } : (json?.output ? { text: json.output.text || JSON.stringify(json.output) } : json);
       } catch (e) {
-        console.error('Failed to initialize @google/genai client', e);
-        return res.status(500).json({ error: 'AI client initialization failed' });
+        console.error('External model call failed', e);
+        // continue to try other options
       }
     }
-  // If we are in fallback mode, generate a canned response based on simple heuristics
-    let response;
-    if (USE_FALLBACK) {
-      // Simple heuristic responder
+
+    // 2) If no response yet, try Google GenAI client (only if API key present)
+    if (!response && !USE_FALLBACK) {
+      if (!genaiClient) {
+        try {
+          const mod = await import('@google/genai');
+          const GoogleGenAI = mod.GoogleGenAI || mod.default || mod;
+          genaiClient = new GoogleGenAI({ apiKey: API_KEY });
+        } catch (e) {
+          console.error('Failed to initialize @google/genai client', e);
+        }
+      }
+
+      if (genaiClient && !response) {
+        try {
+          if (genaiClient.models && typeof genaiClient.models.generateContent === 'function') {
+            response = await genaiClient.models.generateContent({ model: 'gemini-2.5-flash', contents: finalPrompt });
+          } else if (typeof genaiClient.generateText === 'function') {
+            response = await genaiClient.generateText(finalPrompt);
+          } else {
+            response = await genaiClient.call?.(finalPrompt) || response;
+          }
+        } catch (e) {
+          console.error('GenAI client call failed', e);
+        }
+      }
+    }
+
+    // 3) If still no response, and we're in fallback mode (no API key & no external model result), use canned replies
+    if (!response && USE_FALLBACK) {
       const lower = (question || '').toLowerCase();
       if (lower.includes('prezzo') || lower.includes('costo')) {
         response = { text: 'Prezzi principali:\n• ASIC intero: €7.450 (netto con detrazione: €2.607)\n• ½ ASIC: €3.810 (netto: €1.333)\n• MAP da €150.' };
@@ -107,59 +146,6 @@ app.post('/api/chat', async (req, res) => {
         response = { text: 'Offriamo: 1) Vendita quote ASIC; 2) Hosting & gestione; 3) Monitoraggio e report; 4) Supporto legale per fiscalita\u00e0.' };
       } else {
         response = { text: 'Mi dispiace, al momento stiamo eseguendo il server in modalità demo senza accesso AI esterno. Per informazioni dettagliate, contatta info@digitalforcemining.it' };
-      }
-    } else {
-      // Prefer an externally configured model endpoint (e.g., ai.studio app) if provided
-      if (EXTERNAL_MODEL_URL) {
-        try {
-          const payload = {
-            prompt: finalPrompt,
-            history: Array.isArray(sessionHistory) ? sessionHistory.slice(-10) : (clientHistory || []),
-            sessionId,
-          };
-          const headers = { 'Content-Type': 'application/json' };
-          if (EXTERNAL_API_KEY) headers[EXTERNAL_API_HEADER] = EXTERNAL_API_KEY_PREFIX + EXTERNAL_API_KEY;
-
-          const fetchRes = await fetch(EXTERNAL_MODEL_URL, { method: 'POST', headers, body: JSON.stringify(payload), timeout: 15000 });
-          const json = await fetchRes.json();
-          // Try common fields for text
-          response = json?.text ? { text: json.text } : (json?.output ? { text: json.output.text || JSON.stringify(json.output) } : json);
-        } catch (e) {
-          console.error('External model call failed', e);
-          // fallback to genai client if configured, else to fallback responses
-          if (!genaiClient && !USE_FALLBACK) {
-            try {
-              const mod = await import('@google/genai');
-              const GoogleGenAI = mod.GoogleGenAI || mod.default || mod;
-              genaiClient = new GoogleGenAI({ apiKey: API_KEY });
-            } catch (ee) {
-              console.error('Failed to initialize @google/genai client after external fail', ee);
-            }
-          }
-        }
-      }
-
-      // If response still not set, call the local Google GenAI client if available
-      if (!response) {
-        if (!genaiClient && !USE_FALLBACK) {
-          try {
-            const mod = await import('@google/genai');
-            const GoogleGenAI = mod.GoogleGenAI || mod.default || mod;
-            genaiClient = new GoogleGenAI({ apiKey: API_KEY });
-          } catch (e) {
-            console.error('Failed to initialize @google/genai client', e);
-            response = response || { text: '' };
-          }
-        }
-        if (genaiClient && !response) {
-          if (genaiClient.models && typeof genaiClient.models.generateContent === 'function') {
-            response = await genaiClient.models.generateContent({ model: 'gemini-2.5-flash', contents: finalPrompt });
-          } else if (typeof genaiClient.generateText === 'function') {
-            response = await genaiClient.generateText(finalPrompt);
-          } else {
-            response = await genaiClient.call?.(finalPrompt) || response;
-          }
-        }
       }
     }
 

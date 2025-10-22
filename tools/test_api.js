@@ -7,6 +7,8 @@ async function run() {
 
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers['X-TEST-TOKEN'] = token;
+  // Allow tests to simulate a browser Origin header by setting ORIGIN env var
+  if (process.env.ORIGIN) headers['Origin'] = process.env.ORIGIN;
 
   try {
     const res = await fetch(url, { method: 'POST', body: JSON.stringify({ question }), headers });
