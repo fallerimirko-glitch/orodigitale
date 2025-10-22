@@ -97,9 +97,26 @@ app.post('/api/chat', async (req, res) => {
         if (EXTERNAL_API_KEY) headers[EXTERNAL_API_HEADER] = EXTERNAL_API_KEY_PREFIX + EXTERNAL_API_KEY;
 
         const fetchRes = await fetch(EXTERNAL_MODEL_URL, { method: 'POST', headers, body: JSON.stringify(payload), timeout: 15000 });
-        const json = await fetchRes.json();
-        // Try common fields for text
-        response = json?.text ? { text: json.text } : (json?.output ? { text: json.output.text || JSON.stringify(json.output) } : json);
+        let json = null;
+        let rawText = null;
+        try {
+          rawText = await fetchRes.text();
+          // try to parse JSON, but keep raw as fallback
+          try { json = JSON.parse(rawText); } catch(e){ json = null; }
+        } catch (e) {
+          console.error('Failed to read external model response text', e);
+        }
+
+        // If external returns a non-OK status, surface that to the client for debugging
+        if (!fetchRes.ok) {
+          console.error('[proxy] external model returned non-OK', { status: fetchRes.status, bodyPreview: (rawText || '').slice(0,1000) });
+          response = { error: 'external_model_error', status: fetchRes.status, bodyPreview: (rawText || '').slice(0,2000) };
+        } else {
+          // log a truncated preview for diagnosis (don't log secrets)
+          try { console.log('[proxy] external response preview:', (rawText || '').slice(0,600)); } catch(e){}
+          // Try common fields for text
+          response = json?.text ? { text: json.text } : (json?.output ? { text: json.output.text || JSON.stringify(json.output) } : (json || rawText));
+        }
       } catch (e) {
         console.error('External model call failed', e);
         // continue to try other options
