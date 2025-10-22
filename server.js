@@ -3,7 +3,12 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 
+
+const fsExistsSync = (p) => {
+  try { return fs.existsSync(p); } catch { return false; }
+};
 
 // Load env
 dotenv.config();
@@ -100,6 +105,19 @@ const chatLimiter = rateLimit({
 app.use('/api/chat', chatLimiter);
 
 // Serve static build for preview if available
+// Prefer serving a static landing page if present in /public
+const landingPath = path.join(process.cwd(), 'public', 'landing.html');
+app.get('/', (req, res, next) => {
+  try {
+    if (fsExistsSync(landingPath)) {
+      return res.sendFile(landingPath);
+    }
+  } catch (e) {
+    // ignore and fall through to static
+  }
+  next();
+});
+
 app.use(express.static(path.join(process.cwd(), 'dist')));
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
