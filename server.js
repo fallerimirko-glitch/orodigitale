@@ -22,6 +22,11 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3001;
 const API_KEY = process.env.GEMINI_API_KEY || process.env.API_KEY;
+const EXTERNAL_MODEL_URL = process.env.EXTERNAL_MODEL_URL || '';
+const EXTERNAL_API_KEY = process.env.EXTERNAL_API_KEY || '';
+// Name of header to pass the key in (default Authorization)
+const EXTERNAL_API_HEADER = process.env.EXTERNAL_API_HEADER || 'Authorization';
+const EXTERNAL_API_KEY_PREFIX = process.env.EXTERNAL_API_KEY_PREFIX || 'Bearer ';
 const USE_FALLBACK = !API_KEY; // if no API key provided, use local fallback responses
 const TEST_TOKEN = process.env.TEST_TOKEN || '';
 
@@ -104,14 +109,57 @@ app.post('/api/chat', async (req, res) => {
         response = { text: 'Mi dispiace, al momento stiamo eseguendo il server in modalità demo senza accesso AI esterno. Per informazioni dettagliate, contatta info@digitalforcemining.it' };
       }
     } else {
-      // Call the GenAI client - use generateContent if available, else try alternative entrypoints
-      if (genaiClient.models && typeof genaiClient.models.generateContent === 'function') {
-        response = await genaiClient.models.generateContent({ model: 'gemini-2.5-flash', contents: finalPrompt });
-      } else if (typeof genaiClient.generateText === 'function') {
-        response = await genaiClient.generateText(finalPrompt);
-      } else {
-        // Last resort: try to call a generic method
-        response = await genaiClient.call?.(finalPrompt) || response;
+      // Prefer an externally configured model endpoint (e.g., ai.studio app) if provided
+      if (EXTERNAL_MODEL_URL) {
+        try {
+          const payload = {
+            prompt: finalPrompt,
+            history: Array.isArray(sessionHistory) ? sessionHistory.slice(-10) : (clientHistory || []),
+            sessionId,
+          };
+          const headers = { 'Content-Type': 'application/json' };
+          if (EXTERNAL_API_KEY) headers[EXTERNAL_API_HEADER] = EXTERNAL_API_KEY_PREFIX + EXTERNAL_API_KEY;
+
+          const fetchRes = await fetch(EXTERNAL_MODEL_URL, { method: 'POST', headers, body: JSON.stringify(payload), timeout: 15000 });
+          const json = await fetchRes.json();
+          // Try common fields for text
+          response = json?.text ? { text: json.text } : (json?.output ? { text: json.output.text || JSON.stringify(json.output) } : json);
+        } catch (e) {
+          console.error('External model call failed', e);
+          // fallback to genai client if configured, else to fallback responses
+          if (!genaiClient && !USE_FALLBACK) {
+            try {
+              const mod = await import('@google/genai');
+              const GoogleGenAI = mod.GoogleGenAI || mod.default || mod;
+              genaiClient = new GoogleGenAI({ apiKey: API_KEY });
+            } catch (ee) {
+              console.error('Failed to initialize @google/genai client after external fail', ee);
+            }
+          }
+        }
+      }
+
+      // If response still not set, call the local Google GenAI client if available
+      if (!response) {
+        if (!genaiClient && !USE_FALLBACK) {
+          try {
+            const mod = await import('@google/genai');
+            const GoogleGenAI = mod.GoogleGenAI || mod.default || mod;
+            genaiClient = new GoogleGenAI({ apiKey: API_KEY });
+          } catch (e) {
+            console.error('Failed to initialize @google/genai client', e);
+            response = response || { text: '' };
+          }
+        }
+        if (genaiClient && !response) {
+          if (genaiClient.models && typeof genaiClient.models.generateContent === 'function') {
+            response = await genaiClient.models.generateContent({ model: 'gemini-2.5-flash', contents: finalPrompt });
+          } else if (typeof genaiClient.generateText === 'function') {
+            response = await genaiClient.generateText(finalPrompt);
+          } else {
+            response = await genaiClient.call?.(finalPrompt) || response;
+          }
+        }
       }
     }
 
