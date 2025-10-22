@@ -70,6 +70,8 @@ app.post('/api/chat', async (req, res) => {
         response = { text: 'Garanzie: Piena proprietà legale, contratto italiano, certificazione BDO, recesso 14 giorni.' };
       } else if (lower.includes('flexminer') || lower.includes('app')) {
         response = { text: 'Flexminer è l\'app di monitoraggio inclusa per controllare produzione, hashrate e statistiche in tempo reale.' };
+      } else if (lower.includes('servizi') || lower.includes('offrite') || lower.includes('cosa fate') || lower.includes('che servizi')) {
+        response = { text: 'Offriamo: 1) Vendita di quote di macchine ASIC (intere o frazionate); 2) Hosting e gestione in data center certificati; 3) Monitoraggio e report mensili; 4) Supporto legale per inquadramento fiscale.' };
       } else {
         response = { text: 'Mi dispiace, al momento stiamo eseguendo il server in modalità demo senza accesso AI esterno. Per informazioni dettagliate, contatta info@digitalforcemining.it' };
       }
