@@ -14,6 +14,8 @@ COPY --from=build /app/dist ./dist
 COPY package*.json ./
 RUN npm ci --production
 COPY server.js ./
-COPY .env.local ./
+# Do NOT copy local .env files into the image. Environment variables should be
+# provided by the hosting platform (Render, Heroku, etc.) at deploy time.
+# COPY .env.local ./   <-- intentionally omitted for security and portability
 EXPOSE 3001
 CMD ["node","server.js"]
