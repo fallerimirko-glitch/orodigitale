@@ -144,8 +144,8 @@
         appendMsg(q,'user');
         chatInput.value='';
         appendMsg('Sto pensando...','bot');
-        try{
-          const res = await fetch('/api/chat', {method:'POST',headers:{'Content-Type':'application/json'},body: JSON.stringify({ question: q })});
+                  try{
+                  const res = await fetch('/api/chat', {method:'POST',headers:{'Content-Type':'application/json','X-TEST-TOKEN':'aaa4c06a227b47b3a5b1eb7202efa296d3a3368aba27441d87705a4d387dfb5f'},body: JSON.stringify({ question: q })});
           if(!res.ok){
             appendMsg('Errore server: ' + res.status);
             return;
