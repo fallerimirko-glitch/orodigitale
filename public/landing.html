@@ -146,7 +146,7 @@
         chatInput.value='';
                 appendMsg('Sto pensando...','bot');
                 try{
-                const res = await fetch('/api/chat', {method:'POST',headers:{'Content-Type':'application/json'},body: JSON.stringify({ question: q })});
+                  const res = await fetch('/api/chat', {method:'POST',credentials: 'include',headers:{'Content-Type':'application/json'},body: JSON.stringify({ question: q })});
                   console.log('Fetch /api/chat status:', res.status, res.statusText);
                   if(!res.ok){
                     // try to read response body for more info
