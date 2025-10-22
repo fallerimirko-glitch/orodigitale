@@ -117,16 +117,77 @@ app.post('/api/chat', async (req, res) => {
             bodyPreview: (rawText || '').slice(0,2000),
           };
         } catch (e) {}
-
-        // If external returns a non-OK status, surface that to the client for debugging
-        if (!fetchRes.ok) {
-          console.error('[proxy] external model returned non-OK', { status: fetchRes.status, bodyPreview: (rawText || '').slice(0,1000) });
-          response = { error: 'external_model_error', status: fetchRes.status, bodyPreview: (rawText || '').slice(0,2000) };
-        } else {
-          // log a truncated preview for diagnosis (don't log secrets)
+        // If external returns a non-OK status or an HTML page, attempt a few common API endpoint fallbacks
+        let usedExternal = false;
+        const looksLikeHtml = (rawText || '').trim().startsWith('<');
+        if (fetchRes.ok && !looksLikeHtml) {
+          // good response
           try { console.log('[proxy] external response preview:', (rawText || '').slice(0,600)); } catch(e){}
-          // Try common fields for text
           response = json?.text ? { text: json.text } : (json?.output ? { text: json.output.text || JSON.stringify(json.output) } : (json || rawText));
+          usedExternal = true;
+        } else {
+          console.error('[proxy] external model returned non-OK or HTML', { status: fetchRes.status, bodyPreview: (rawText || '').slice(0,1000) });
+
+          // Build candidate fallback URLs when the target looks like an ai.studio app page
+          const candidates = [];
+          try {
+            const parsed = new URL(EXTERNAL_MODEL_URL);
+            const hostname = parsed.hostname;
+            const pathname = parsed.pathname || '';
+            // If path contains /apps/{id}, extract id
+            const appMatch = pathname.match(/\/apps\/(.+?)(?:\/|$)/);
+            const appId = appMatch ? appMatch[1] : null;
+
+            // Common ai.studio API patterns to try
+            if (appId) {
+              candidates.push(`https://api.ai.studio/apps/${appId}/predict`);
+              candidates.push(`https://api.ai.studio/v1/apps/${appId}/predict`);
+              candidates.push(`https://ai.studio/api/apps/${appId}/predict`);
+              candidates.push(`https://ai.studio/v1/apps/${appId}/predict`);
+              candidates.push(`https://${hostname}/api/apps/${appId}/predict`);
+            }
+
+            // Try replacing host with api.ai.studio with same path
+            if (!hostname.includes('api.ai.studio')) {
+              candidates.push(EXTERNAL_MODEL_URL.replace(hostname, 'api.ai.studio'));
+            }
+
+            // generic predict endpoints
+            candidates.push(EXTERNAL_MODEL_URL + (EXTERNAL_MODEL_URL.endsWith('/') ? 'predict' : '/predict'));
+            candidates.push(EXTERNAL_MODEL_URL + (EXTERNAL_MODEL_URL.endsWith('/') ? 'invoke' : '/invoke'));
+          } catch (e) {
+            // ignore URL parse errors
+          }
+
+          // Try each candidate until one returns JSON or non-HTML
+          for (const alt of candidates) {
+            try {
+              console.log('[proxy] trying alternative external endpoint', alt);
+              const altRes = await fetch(alt, { method: 'POST', headers, body: JSON.stringify(payload), timeout: 15000 });
+              let altText = null;
+              let altJson = null;
+              try { altText = await altRes.text(); } catch(e) { altText = null; }
+              try { altJson = altText ? JSON.parse(altText) : null; } catch(e){ altJson = null; }
+
+              // Save preview for admin
+              try { global.__orodigitale_last_external = { timestamp: Date.now(), url: alt, status: altRes.status, bodyPreview: (altText||'').slice(0,2000) }; } catch(e){}
+
+              const altLooksHtml = (altText || '').trim().startsWith('<');
+              if (altRes.ok && !altLooksHtml) {
+                usedExternal = true;
+                response = altJson?.text ? { text: altJson.text } : (altJson?.output ? { text: altJson.output.text || JSON.stringify(altJson.output) } : (altJson || altText));
+                console.log('[proxy] alternative endpoint succeeded', alt);
+                break;
+              }
+            } catch (e) {
+              console.error('[proxy] alternative endpoint failed', alt, e?.message || e);
+            }
+          }
+
+          if (!usedExternal) {
+            // If no alternative worked, surface the original fetch error to client
+            response = { error: 'external_model_error', status: fetchRes.status, bodyPreview: (rawText || '').slice(0,2000) };
+          }
         }
       } catch (e) {
         console.error('External model call failed', e);
