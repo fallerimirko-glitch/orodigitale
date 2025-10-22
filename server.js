@@ -107,6 +107,17 @@ app.post('/api/chat', async (req, res) => {
           console.error('Failed to read external model response text', e);
         }
 
+        // Save a preview of the external response globally for admin debugging (no secrets)
+        try {
+          if (!global.__orodigitale_last_external) global.__orodigitale_last_external = {};
+          global.__orodigitale_last_external = {
+            timestamp: Date.now(),
+            url: EXTERNAL_MODEL_URL,
+            status: fetchRes.status,
+            bodyPreview: (rawText || '').slice(0,2000),
+          };
+        } catch (e) {}
+
         // If external returns a non-OK status, surface that to the client for debugging
         if (!fetchRes.ok) {
           console.error('[proxy] external model returned non-OK', { status: fetchRes.status, bodyPreview: (rawText || '').slice(0,1000) });
@@ -218,6 +229,23 @@ app.get('/api/debug', (req, res) => {
     return res.json({ received, origin: req.headers.origin || null, ua: req.headers['user-agent'] || null });
   } catch (e) {
     return res.status(500).json({ error: 'debug-failed' });
+  }
+});
+
+// Admin endpoint to view last external model response preview
+app.get('/api/admin/external-preview', (req, res) => {
+  try {
+    // same-origin or valid TEST_TOKEN required
+    const origin = (req.headers.origin || req.headers.referer || '').toString();
+    const host = (req.get('host') || '').toString();
+    const allowSameOrigin = origin && host && origin.includes(host);
+    const token = (req.headers['x-test-token'] || req.query.token || '').toString();
+    if (!allowSameOrigin && token !== TEST_TOKEN) return res.status(401).json({ error: 'unauthorized' });
+
+    const last = global.__orodigitale_last_external || null;
+    return res.json({ last });
+  } catch (e) {
+    return res.status(500).json({ error: 'admin-failed' });
   }
 });
 
