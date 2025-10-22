@@ -36,8 +36,16 @@ app.post('/api/chat', async (req, res) => {
     // simple auth for beta testers: require TEST_TOKEN if set
     if (TEST_TOKEN) {
       const token = (req.headers['x-test-token'] || req.query.token || '').toString();
+      // Allow same-origin browser requests (so we don't need to expose the token in client)
+      const origin = (req.headers.origin || req.headers.referer || '').toString();
+      const host = (req.get('host') || '').toString();
+      const allowSameOrigin = origin && host && origin.includes(host);
       if (!token || token !== TEST_TOKEN) {
-        return res.status(401).json({ error: 'Unauthorized - missing or invalid TEST_TOKEN' });
+        if (!allowSameOrigin) {
+          return res.status(401).json({ error: 'Unauthorized - missing or invalid TEST_TOKEN' });
+        } else {
+          console.log('[auth] allowing same-origin request without token', { origin, host });
+        }
       }
     }
 
