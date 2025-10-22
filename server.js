@@ -4,6 +4,7 @@ import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 
 
 const fsExistsSync = (p) => {
@@ -15,7 +16,8 @@ dotenv.config();
 
 const app = express();
 // Allow cross-origin requests and explicitly allow our custom TEST header
-app.use(cors({ origin: true, allowedHeaders: ['Content-Type', 'X-TEST-TOKEN', 'Authorization'] }));
+// Allow credentials so same-origin fetches can use cookies
+app.use(cors({ origin: true, credentials: true, allowedHeaders: ['Content-Type', 'X-TEST-TOKEN', 'Authorization'] }));
 app.use(express.json());
 
 const PORT = process.env.PORT || 3001;
@@ -49,7 +51,25 @@ app.post('/api/chat', async (req, res) => {
       }
     }
 
-    const { question, history, prompt } = req.body;
+    const { question, history: clientHistory, prompt } = req.body;
+
+    // Session handling: create or read a sessionId cookie, track short conversation history in-memory
+    const cookies = (req.headers.cookie || '').split(';').map(c => c.trim()).filter(Boolean);
+    let sessionId = null;
+    for (const c of cookies) {
+      const [k,v] = c.split('='); if (k === 'sessionId') { sessionId = v; break; }
+    }
+    if (!sessionId) {
+      sessionId = crypto.randomUUID();
+      // set a session cookie (HttpOnly)
+      res.setHeader('Set-Cookie', `sessionId=${sessionId}; Path=/; HttpOnly`);
+    }
+
+    // in-memory session store (small, ephemeral)
+    if (!global.__orodigitale_sessions) global.__orodigitale_sessions = new Map();
+    const sessions = global.__orodigitale_sessions;
+    if (!sessions.has(sessionId)) sessions.set(sessionId, []);
+    const sessionHistory = sessions.get(sessionId);
 
     // Fallback: if client-side already sent a fully built prompt, use it; else build a small one
     const finalPrompt = prompt || `User: ${question}\n`;
@@ -67,7 +87,7 @@ app.post('/api/chat', async (req, res) => {
         return res.status(500).json({ error: 'AI client initialization failed' });
       }
     }
-    // If we are in fallback mode, generate a canned response based on simple heuristics
+  // If we are in fallback mode, generate a canned response based on simple heuristics
     let response;
     if (USE_FALLBACK) {
       // Simple heuristic responder
@@ -79,7 +99,7 @@ app.post('/api/chat', async (req, res) => {
       } else if (lower.includes('flexminer') || lower.includes('app')) {
         response = { text: 'Flexminer è l\'app di monitoraggio inclusa per controllare produzione, hashrate e statistiche in tempo reale.' };
       } else if (lower.includes('servizi') || lower.includes('offrite') || lower.includes('cosa fate') || lower.includes('che servizi')) {
-        response = { text: 'Offriamo: 1) Vendita di quote di macchine ASIC (intere o frazionate); 2) Hosting e gestione in data center certificati; 3) Monitoraggio e report mensili; 4) Supporto legale per inquadramento fiscale.' };
+        response = { text: 'Offriamo: 1) Vendita quote ASIC; 2) Hosting & gestione; 3) Monitoraggio e report; 4) Supporto legale per fiscalita\u00e0.' };
       } else {
         response = { text: 'Mi dispiace, al momento stiamo eseguendo il server in modalità demo senza accesso AI esterno. Per informazioni dettagliate, contatta info@digitalforcemining.it' };
       }
@@ -114,7 +134,13 @@ app.post('/api/chat', async (req, res) => {
       // ignore sanitization errors
     }
 
-    console.log(`[chat] question="${(question||'').slice(0,120)}" len(response)=${text.length} fallback=${USE_FALLBACK}`);
+    // store in session history (truncate to last 10)
+    try {
+      sessionHistory.push({ q: question || '', a: text.slice(0, 2000) });
+      if (sessionHistory.length > 10) sessionHistory.shift();
+    } catch (e) {}
+
+    console.log(`[chat] session=${sessionId} question="${(question||'').slice(0,120)}" len(response)=${text.length} fallback=${USE_FALLBACK}`);
 
     res.json({ text });
   } catch (err) {
