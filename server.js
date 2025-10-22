@@ -14,7 +14,8 @@ const fsExistsSync = (p) => {
 dotenv.config();
 
 const app = express();
-app.use(cors());
+// Allow cross-origin requests and explicitly allow our custom TEST header
+app.use(cors({ origin: true, allowedHeaders: ['Content-Type', 'X-TEST-TOKEN', 'Authorization'] }));
 app.use(express.json());
 
 const PORT = process.env.PORT || 3001;
@@ -85,7 +86,25 @@ app.post('/api/chat', async (req, res) => {
     }
 
     // The library may return different shapes; try common fields
-    const text = response?.text || response?.output || (Array.isArray(response?.candidates) ? response.candidates[0]?.content : undefined) || JSON.stringify(response?.[0]) || '';
+    let text = response?.text || response?.output || (Array.isArray(response?.candidates) ? response.candidates[0]?.content : undefined) || '';
+    if (!text && Array.isArray(response)) text = JSON.stringify(response[0]);
+
+    // If we still don't have a string, try to stringify safely
+    if (typeof text !== 'string') {
+      try { text = String(text || ''); } catch (e) { text = ''; }
+    }
+
+    // Basic sanitization: strip HTML tags and limit length to avoid flooding the client
+    try {
+      // remove any HTML tags
+      text = text.replace(/<[^>]*>/g, '');
+      // truncate to 3000 chars (feel free to lower this)
+      if (text.length > 3000) text = text.slice(0, 3000) + '\n\n[Output truncated]';
+    } catch (e) {
+      // ignore sanitization errors
+    }
+
+    console.log(`[chat] question="${(question||'').slice(0,120)}" len(response)=${text.length} fallback=${USE_FALLBACK}`);
 
     res.json({ text });
   } catch (err) {
