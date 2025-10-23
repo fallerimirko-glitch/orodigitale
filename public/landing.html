@@ -9,29 +9,29 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <style>
-      :root{--bg: linear-gradient(180deg,#05060a 0%, #0a0f1a 100%);--card: rgba(255,255,255,0.04);--muted:#9aa4b2;--accent:#f59e0b;--accent-2:#fbbf24;--text:#e6eef6}
+      :root{--bg:#071025;--card:#0b2030;--muted:#9aa4b2;--accent:#f59e0b;--accent-2:#fbbf24;--text:#e6eef6}
       *{box-sizing:border-box}
       html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
       a{color:inherit}
       .container{max-width:1100px;margin:0 auto;padding:0 20px}
-      header{position:relative;padding:64px 0 48px}
+      header{position:relative;padding:48px 0}
       .hero{display:grid;grid-template-columns:1fr 420px;gap:32px;align-items:center}
-      .hero-left h1{font-size:clamp(2rem,5vw,3.6rem);margin:0 0 18px;line-height:1.02}
-      .subtitle{color:var(--muted);font-size:1.05rem;margin:0 0 22px}
+      .hero-left h1{font-size:clamp(2rem,5vw,3rem);margin:0 0 12px;line-height:1.05}
+      .subtitle{color:var(--muted);font-size:1.0rem;margin:0 0 18px}
       .cta{display:inline-block;background:var(--accent);color:#081021;padding:12px 18px;border-radius:10px;font-weight:700;text-decoration:none}
-      .features{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:28px}
-      .card{background:var(--card);padding:18px;border-radius:12px;border:1px solid rgba(255,255,255,0.04)}
-      .hero-right{background:linear-gradient(180deg,rgba(255,255,255,0.03),transparent);padding:20px;border-radius:12px;border:1px solid rgba(255,255,255,0.04)}
-      .price{font-size:1.25rem;font-weight:700;color:var(--accent-2)}
-      main{padding:36px 0}
-      .section{margin:28px 0}
+      .features{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:22px}
+      .card{background:var(--card);padding:14px;border-radius:10px;border:1px solid rgba(255,255,255,0.03)}
+      .hero-right{background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);padding:20px;border-radius:10px;border:1px solid rgba(255,255,255,0.03)}
+      .price{font-size:1.15rem;font-weight:700;color:var(--accent-2)}
+      main{padding:28px 0}
+      .section{margin:20px 0}
       .lead-cta{display:flex;gap:12px;align-items:center}
-      footer{padding:28px 0;border-top:1px solid rgba(255,255,255,0.02);color:var(--muted);font-size:0.95rem}
+      footer{padding:22px 0;border-top:1px solid rgba(255,255,255,0.02);color:var(--muted);font-size:0.95rem}
       /* Chat widget */
-      .chat-button{position:fixed;right:20px;bottom:20px;background:linear-gradient(180deg,var(--accent),var(--accent-2));color:#081021;border-radius:999px;padding:14px 18px;font-weight:700;border:none;cursor:pointer;box-shadow:0 6px 18px rgba(11,19,34,0.6)}
-      .chat-modal{position:fixed;right:20px;bottom:80px;width:360px;max-width:calc(100% - 40px);background:#071029;border-radius:12px;border:1px solid rgba(255,255,255,0.04);box-shadow:0 10px 30px rgba(2,6,23,0.7);overflow:hidden;display:flex;flex-direction:column}
-      .chat-header{padding:12px 14px;background:linear-gradient(90deg,rgba(0,0,0,0.2),rgba(255,255,255,0.02));display:flex;align-items:center;gap:10px}
-      .chat-messages{padding:12px;flex:1;overflow:auto;min-height:140px}
+      .chat-button{position:fixed;right:20px;bottom:20px;background:linear-gradient(180deg,var(--accent),var(--accent-2));color:#081021;border-radius:999px;padding:12px 14px;font-weight:700;border:none;cursor:pointer;box-shadow:0 10px 30px rgba(0,0,0,0.6)}
+      .chat-modal{position:fixed;right:20px;bottom:88px;width:380px;max-width:calc(100% - 40px);background:#071229;border-radius:12px;border:1px solid rgba(255,255,255,0.04);box-shadow:0 18px 40px rgba(0,0,0,0.6);overflow:hidden;display:flex;flex-direction:column}
+      .chat-header{padding:12px 14px;background:linear-gradient(90deg,rgba(0,0,0,0.15),rgba(255,255,255,0.01));display:flex;align-items:center;gap:10px}
+      .chat-messages{padding:12px;flex:1;overflow:auto;min-height:160px}
       .msg{margin:8px 0;padding:10px 12px;border-radius:10px;max-width:84%}
       .msg.user{background:#0b283f;color:#dff3ff;margin-left:auto}
       .msg.bot{background:rgba(255,255,255,0.03);color:var(--text)}
@@ -92,11 +92,12 @@
         <section id="lead" class="section lead">
           <h3>Vuoi maggiori informazioni?</h3>
           <p style="color:var(--muted);margin-bottom:12px">Lascia i tuoi contatti e ti ricontatteremo con una proposta personalizzata.</p>
-          <form style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-            <input placeholder="Nome" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--text)" />
-            <input placeholder="Email" style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--text)" />
-            <button class="cta">Invia richiesta</button>
+          <form id="leadForm" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <input id="leadName" name="name" placeholder="Nome" required style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--text)" />
+            <input id="leadEmail" name="email" type="email" placeholder="Email" required style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--text)" />
+            <button class="cta" type="submit">Invia richiesta</button>
           </form>
+          <div id="leadMsg" style="margin-top:10px;color:var(--muted)"></div>
         </section>
       </div>
     </main>
@@ -108,7 +109,7 @@
     </footer>
 
     <!-- Chat widget -->
-    <button id="chatToggle" class="chat-button" aria-label="Apri chat">Chat con Flexi</button>
+    <button id="chatToggle" class="chat-button" aria-label="Apri chat">Chat</button>
     <div id="chatModal" class="chat-modal" style="display:none" role="dialog" aria-label="Chatbot">
       <div class="chat-header"><strong>Flexi — Assistente OroDigitale</strong><button id="chatClose" style="margin-left:auto;background:transparent;border:none;color:var(--muted);cursor:pointer">✕</button></div>
       <div id="chatMessages" class="chat-messages" aria-live="polite"></div>
@@ -136,7 +137,7 @@
         chatMessages.scrollTop = chatMessages.scrollHeight;
       }
 
-      chatToggle.addEventListener('click', ()=>{ chatModal.style.display='flex'; chatToggle.style.display='none'; appendMsg('Ciao! Sono Flexi, come posso aiutarti oggi?'); });
+  chatToggle.addEventListener('click', ()=>{ chatModal.style.display='flex'; chatToggle.style.display='none'; appendMsg('Ciao! Sono Flexi, come posso aiutarti oggi?'); });
       chatClose.addEventListener('click', ()=>{ chatModal.style.display='none'; chatToggle.style.display='block'; });
 
       async function sendQuestion(){
@@ -179,6 +180,21 @@
 
       chatSend.addEventListener('click', sendQuestion);
       chatInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); sendQuestion(); }});
+
+      // Lead form handler (demo: sends request to /api/chat as a placeholder)
+      document.getElementById('leadForm').addEventListener('submit', async (ev)=>{
+        ev.preventDefault();
+        const name = document.getElementById('leadName').value;
+        const email = document.getElementById('leadEmail').value;
+        document.getElementById('leadMsg').textContent = 'Invio richiesta...';
+        try{
+          const res = await fetch('/api/chat', {method:'POST',headers:{'Content-Type':'application/json'},body: JSON.stringify({ question: `Nuovo lead: ${name} - ${email}.` })});
+          const j = await res.json();
+          document.getElementById('leadMsg').textContent = 'Grazie! Riceverai presto una risposta via email.';
+        }catch(e){
+          document.getElementById('leadMsg').textContent = 'Errore, riprova più tardi.';
+        }
+      });
 
       // Debug removed in production build
     </script>

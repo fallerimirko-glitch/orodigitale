@@ -1,0 +1,53 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Admin - Runtime Config</title>
+    <style>body{font-family:system-ui,Arial;margin:24px}label{display:block;margin-top:12px}input,textarea{width:100%;padding:8px}button{margin-top:12px;padding:8px 12px}</style>
+  </head>
+  <body>
+    <h2>Admin - Set External Model</h2>
+    <p>Paste the programmatic API endpoint URL from AI Studio or Vertex, and the API key. Protected by ADMIN_PASSWORD header (set in Render environment).</p>
+    <label>Programmatic endpoint (EXTERNAL_MODEL_URL)
+      <input id="url" placeholder="https://api.ai.studio/v1/apps/APP_ID/predict" />
+    </label>
+    <label>API key (EXTERNAL_API_KEY)
+      <input id="key" placeholder="sk-..." />
+    </label>
+    <label>Header (optional, default Authorization)
+      <input id="header" placeholder="Authorization or x-api-key" />
+    </label>
+    <label>Key prefix (optional, default 'Bearer ')
+      <input id="prefix" placeholder="Bearer " />
+    </label>
+    <label>Admin password (for this request only)
+      <input id="password" placeholder="ADMIN_PASSWORD" />
+    </label>
+    <button id="save">Save</button>
+    <div id="out" style="margin-top:12px;color:green"></div>
+
+    <script>
+      document.getElementById('save').addEventListener('click', async () => {
+        const url = document.getElementById('url').value;
+        const key = document.getElementById('key').value;
+        const header = document.getElementById('header').value;
+        const prefix = document.getElementById('prefix').value;
+        const password = document.getElementById('password').value;
+        const body = { EXTERNAL_MODEL_URL: url, EXTERNAL_API_KEY: key };
+        if (header) body.EXTERNAL_API_HEADER = header;
+        if (prefix) body.EXTERNAL_API_KEY_PREFIX = prefix;
+        try {
+          const res = await fetch('/api/admin/config', {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Password': password }, body: JSON.stringify(body)
+          });
+          const j = await res.json();
+          if (j.ok) document.getElementById('out').textContent = 'Saved. The running server will use the new config immediately.';
+          else document.getElementById('out').textContent = 'Error: ' + JSON.stringify(j);
+        } catch (e) {
+          document.getElementById('out').textContent = 'Network error: ' + e?.message || e;
+        }
+      });
+    </script>
+  </body>
+</html>
